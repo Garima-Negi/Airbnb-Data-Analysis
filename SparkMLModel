@@ -1,0 +1,43 @@
+import org.apache.spark.mllib.feature.HashingTF
+import org.apache.spark.mllib.regression.LabeledPoint
+import org.apache.spark.mllib.classification.LogisticRegressionWithSGD
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.mllib.classification.{NaiveBayes, NaiveBayesModel}
+
+
+
+
+val inputRdd = sc.textFile("/usr/shivraj/final_reviews_SF_2_labeled.csv")
+
+val linesWithSpam = inputRdd.filter(line => line.contains("negative"))
+val spam = linesWithSpam.map( x => x.split(",")(1))
+
+val linesWithHam = inputRdd.filter(line => line.contains("positive"))
+val ham = linesWithHam.map( x => x.split(",")(1))
+
+
+var tf = new HashingTF(numFeatures = 100)
+val spamFeatures = spam.map(comment => tf.transform(comment.split(" ")))
+val hamFeatures = ham.map(comment => tf.transform(comment.split(" ")))
+
+val positiveExamples = spamFeatures.map( features => LabeledPoint(1, features))
+val negativeExamples = hamFeatures.map( features => LabeledPoint(0, features))
+val training_data = positiveExamples.union(negativeExamples)
+training_data.cache()
+
+
+val Array(trainset, testset) = training_data.randomSplit(Array(0.6, 0.4))
+
+val lrLearner = new LogisticRegressionWithSGD()
+//val model = lrLearner.run(trainset)
+val model = NaiveBayes.train(trainset, lambda = 1.0, modelType = "multinomial")
+
+val predictionLabel = testset.map( x => (model.predict(x.features), x.label))
+
+val accuracy = predictionLabel.filter(r => r._1 == r._2).count.toDouble / testset.count
+
+println("Model accuracy : " + accuracy)
+spamFeatures.collect().foreach(println)
+
+//model.save(sc, "/usr/shivraj/myNaiveBayesModel3")
+//val sameModel = NaiveBayesModel.load(sc, "/usr/shivraj/myNaiveBayesModel3")
