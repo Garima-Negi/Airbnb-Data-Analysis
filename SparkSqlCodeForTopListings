@@ -1,0 +1,98 @@
+import org.apache.spark.sql.functions._
+
+import scala.collection.mutable.WrappedArray
+
+import spark.implicits._
+
+val spark = new org.apache.spark.sql.SQLContext(sc)
+
+val df = spark.read
+    .format("com.databricks.spark.csv")
+    .option("header", "true") // Use first line of all files as header
+    .option("mode", "DROPMALFORMED") // Automatically infer data types
+    .csv("/usr/arjun/AirBnb/Test/listings_filtered_NYC.csv")
+        
+//val toInt = udf[Int, String]( _.toInt)
+        
+
+
+val df_trans = df.withColumn("review_scores_rating", df("review_scores_rating").cast("int"))
+
+df_trans.printSchema()
+
+df_trans.registerTempTable("listings")
+
+//val count_prop = spark.sql("SELECT property_type, count(property_type) from listings group by property_type")
+
+//count_prop.registerTempTable("count_prop")
+
+//count_prop.show()
+
+
+ val listings_filter = spark.sql("SELECT * from listings order by property_type asc,review_scores_rating desc")
+ listings_filter.show()
+
+listings_filter.registerTempTable("listings_filter")
+
+listings_filter.printSchema()
+
+val listings_count = spark.sql("Select property_type,count(property_type) as count from listings_filter group by property_type")
+
+listings_count.show()
+
+/*
+
+val func = udf((x: String, y: String, z: String) => "ID:"+x+" Name:"+y+" Price:"+z) 
+
+val listings_new = listings_filter.withColumn("info",func($"id",$"host_name",$"price"))
+
+listings_new.registerTempTable("listings_new")
+
+val listings_apartment = spark.sql("Select latitude,longitude,property_type,info from listings_new where property_type = 'Apartment' limit 10")
+val listings_house = spark.sql("Select latitude,longitude,property_type,info from listings_new where property_type = 'House' limit 10")
+val listings_hotel = spark.sql("Select latitude,longitude,property_type,info from listings_new where property_type = 'Boutique hotel' limit 10")
+val listings_bed = spark.sql("Select latitude,longitude,property_type,info from listings_new where property_type = 'Bed & Breakfast' limit 10")
+val listings_dorm = spark.sql("Select latitude,longitude,property_type,info from listings_new where property_type = 'Dorm' limit 10")
+val listings_other = spark.sql("Select latitude,longitude,property_type,info from listings_new where property_type = 'Other' limit 10")
+
+ listings_new.coalesce(1)
+   .write.format("com.databricks.spark.csv")
+   .option("header", "true")
+   .save("/usr/arjun/NYC/test_NYC")
+   
+listings_house.coalesce(1)
+   .write.format("com.databricks.spark.csv")
+   .option("header", "true")
+   .save("/usr/arjun/NYC/listings_house")
+   
+listings_hotel.coalesce(1)
+   .write.format("com.databricks.spark.csv")
+   .option("header", "true")
+   .save("/usr/arjun/NYC/listings_hotel")
+   
+   
+listings_bed.coalesce(1)
+   .write.format("com.databricks.spark.csv")
+   .option("header", "true")
+   .save("/usr/arjun/NYC/listings_bed")
+
+listings_dorm.coalesce(1)
+   .write.format("com.databricks.spark.csv")
+   .option("header", "true")
+   .save("/usr/arjun/NYC/listings_dorm")
+   
+listings_apartment.coalesce(1)
+   .write.format("com.databricks.spark.csv")
+   .option("header", "true")
+   .save("/usr/arjun/NYC/listings_apartment")
+   
+   
+listings_other.coalesce(1)
+   .write.format("com.databricks.spark.csv")
+   .option("header", "true")
+   .save("/usr/arjun/NYC/listings_other")
+   
+   */
+
+//val final_table = spark.sql("SELECT id,city,state,latitude,longitude,property_type,review_scores_rating from listings_filter order by review_scores_rating asc")
+//result.write.option("header", "true").csv("/usr/arjun/AirBnb/Test/listings_filter_SF.csv")
