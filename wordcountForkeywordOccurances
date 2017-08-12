@@ -1,0 +1,24 @@
+import org.apache.spark.sql.functions._
+
+import scala.collection.mutable.WrappedArray
+
+import spark.implicits._
+
+val spark = new org.apache.spark.sql.SQLContext(sc)
+
+val df = spark.read
+    .format("com.databricks.spark.csv")
+    .option("header", "true") // Use first line of all files as header
+    .option("mode", "DROPMALFORMED") // Automatically infer data types
+    .csv("/usr/arjun/AirBnb/Test/reviews_filtered_NYC_labeled.csv")
+    
+df.registerTempTable("df")
+    
+val filtered = spark.sql("Select text from df where label = 'negative'")
+        
+val wordsDF = filtered.explode("text","word")((line: String) => line.split(" "))
+val wordCountDF = wordsDF.groupBy("word").count()
+wordCountDF.coalesce(1)
+   .write.format("com.databricks.spark.csv")
+   .option("header", "true")
+   .save("/usr/arjun/AirBnb/Test/newyork")
